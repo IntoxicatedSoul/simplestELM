@@ -17,15 +17,27 @@ from sklearn.tree import DecisionTreeRegressor
 
 from ELM import ELMRegressor
 
+##IMPORT OWN DATASET
+forecastData = pd.read_csv (r'C:\Users\Lukas\Documents\Studium\Master\04 SS2020\EI seminar\data\dataset.csv')
+#print (forecastData)
+#set input and output for algorithm
+X = forecastData.iloc[:,1:8].values
+y = forecastData.iloc[:,7].values
+
+
 test_maes_dictionary = dict()
 
 plt.style.use('ggplot')
 sns.set_context("talk")
 np.random.seed(0)
 
-## DATA PREPROCESSING
+## DATA PREPROCESSING -> change that to own data set!
+
 diabetes = load_diabetes()
-X, y = diabetes["data"], diabetes["target"]
+#print(diabetes)
+data_filename: diabetes
+#X, y = diabetes["data"], diabetes["target"]
+#X, y = forecastData["data"], forecastData["target"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=2)
 
 stdScaler_data = StandardScaler()
@@ -42,8 +54,8 @@ y_test = y_test / max_y_train
 ## ELM TRAINING
 MAE_TRAIN_MINS = []
 MAE_TEST_MINS = []
-steps = 10
-neurons = 1000
+steps = 10 #new
+neurons = 10 #new
 for M in range(1, steps , 1):
     MAES_TRAIN = []
     MAES_TEST = []
@@ -62,59 +74,11 @@ for M in range(1, steps , 1):
     MAE_TRAIN_MINS.append(MAES_TRAIN[np.argmin(MAES_TEST)])
 
 print("Minimum MAE ELM =", min(MAE_TEST_MINS))
-print ("using amount of steps: ", steps)
-print ("using amount of neurons: ", neurons)
+print ("using amount of steps: ", steps)    #new
+print ("using amount of neurons: ", neurons) #new
 test_maes_dictionary["ELM"] = min(MAE_TEST_MINS)
 
-## LINEAR REGRESSION TRAINING
-mae = []
-lr = LinearRegression()
-lr.fit(X_train, y_train.ravel())
-prediction = lr.predict(X_test)
-mae.append(mean_absolute_error(y_test, prediction))
-print("Minimum MAE LR =", min(mae))
-test_maes_dictionary["LinReg"] = min(mae)
 
-## K-NEAREST NEIGHBORS TRAINING
-mae = []
-for N in range(1, 51):
-    kn = KNeighborsRegressor()
-    kn.fit(X_train, y_train.ravel())
-    prediction = kn.predict(X_test)
-    mae.append(mean_absolute_error(y_test, prediction))
-print("Minimum MAE KNN =", min(mae))
-test_maes_dictionary["KNN"] = min(mae)
-
-## DECISION TREES TRAINING
-mae = []
-for max_depth in range(1, 51):
-    for min_samples_split in range(5, 102, 5):
-        tree = DecisionTreeRegressor(max_depth=max_depth, min_samples_split=min_samples_split)
-        tree.fit(X_train, y_train.ravel())
-        prediction = tree.predict(X_test)
-        mae.append(mean_absolute_error(y_test, prediction))
-print("Minimum MAE TREE = ", min(mae))
-test_maes_dictionary["Dec. Tree"] = min(mae)
-
-## SUPPORT VECTORS MACHINE TRAINING
-mae = []
-for kernel in ["rbf", "linear", "poly", "sigmoid"]:
-    svr = SVR(kernel=kernel)
-    svr.fit(X_train, y_train.ravel())
-    prediction = svr.predict(X_test)
-    mae.append(mean_absolute_error(y_test, prediction))
-print("Minimum MAE SVR = ", min(mae))
-test_maes_dictionary["SVM"] = min(mae)
-
-## RANDOM FOREST TRAINING
-mae = []
-for n_estimators in range(10, 100, 100):
-    rf = RandomForestRegressor(n_estimators=n_estimators)
-    rf.fit(X_train, y_train.ravel())
-    prediction = rf.predict(X_test)
-    mae.append(mean_absolute_error(y_test, prediction))
-print("Minimum MAE R.Forest = ", min(mae))
-test_maes_dictionary["R. Forest"] = min(mae)
 
 #############################################################################################
 
@@ -126,9 +90,8 @@ df["train"] = MAE_TRAIN_MINS
 ax = df.plot(figsize=(16, 7))
 ax.set_xlabel("Number of Neurons in the hidden layer")
 ax.set_ylabel("Mean Absolute Error")
-ax.set_title(
-    "Lol") #"Extreme Learning Machine error obtained for the Diabetes dataset \n when varying the number of neurons in the "
-    #"hidden layer (min. at 23 neurons)"
+ax.set_title("Extreme Learning Machine error obtained for the Diabetes dataset \n when varying the number of neurons in the "
+   "hidden layer (min. at 23 neurons)")
 #plt.show()
 
 plt.figure(figsize=(16, 7))
