@@ -36,9 +36,12 @@ hoursLookedAt = 24
 hoursToPredict = hoursLookedAt + 1
 
 
+# Scale 1
 bldg_data  = forecastData["Bldg.124"]
 stdScaler_data = StandardScaler()
-
+SCALING=True
+if SCALING:
+    bldg_data = pd.Series(stdScaler_data.fit_transform(bldg_data.values.reshape((-1,1))).reshape((-1,)))
 
 def to_supervised(series):
     cols = []
@@ -49,10 +52,6 @@ def to_supervised(series):
         targets.append((series.shift(-i)))
     return np.stack(cols, 1)[:-hoursToPredict:, :], np.stack(targets, 1)[:-hoursToPredict:, :]
 
-
-
-#bldg_data = stdScaler_data.fit_transform(bldg_data.values.reshape((-1,1)))
-#X, y = to_supervised(pd.Series(bldg_data.reshape((-1,))))
 
 
 
@@ -69,20 +68,17 @@ np.random.seed(0)
 X_train, X_test = X[31068:57347], X[57347:] 
 y_train, y_test = y[31068:57347], y[57347:]
 
+# Scale 2
+if SCALING:
+    y_test = stdScaler_data.inverse_transform(y_test)
 
 
-# X_train = stdScaler_data.fit_transform(X_train)
-# X_test = stdScaler_data.transform(X_test)
-
-# y_train = stdScaler_target.fit_transform(np.expand_dims(y_train.ravel(),1))  # /max(y_train)
-# y_test = stdScaler_target.transform(np.expand_dims(y_test,1))  # /max(y_train)
 max_y_train = max(abs(y_train.ravel()))
 
 ## ELM TRAINING
 MAE_TRAIN_MINS = []
 MAE_TEST_MINS = []
 steps = 3  # new
-#neurons = 10  # new
 predictions = []
 print("Forecast horizon in hours: ", hoursToPredict - hoursLookedAt)
 for M in range(1, steps, 1):
@@ -94,16 +90,19 @@ for M in range(1, steps, 1):
         ELM = ELMRegressor(i)
         ELM.fit(X_train, y_train)
         prediction = ELM.predict(X_train)
-        MAES_TRAIN.append(mean_absolute_error(y_train,
+    
+        MAES_TRAIN.append(mean_absolute_error(y_train, 
                                               prediction))
-
-       
-
+        
         prediction = ELM.predict(X_test)
+      
+        #Scale 3
+        if SCALING:
+            prediction = stdScaler_data.inverse_transform(prediction)
+        
         predictions.append(prediction)
         mae = mean_absolute_error(y_test,
                                              prediction)
-
 
 
         MAES_TEST.append(mae)
@@ -112,6 +111,7 @@ for M in range(1, steps, 1):
         print(f"RMSE: {rmse_clip(prediction, y_test)}")
         #print(f"MAE: {mae}")
         #print(f"MSE: {mean_squared_error(prediction, y_test)}")
+    
     MAE_TEST_MINS.append(min(MAES_TEST))
     MAE_TRAIN_MINS.append(MAES_TRAIN[np.argmin(MAES_TEST)])
 
@@ -122,6 +122,7 @@ print("using amount of steps: ", steps)  # new
 test_maes_dictionary["ELM"] = min(MAE_TEST_MINS)
 
 
+##Showing results
 
 for prediction in predictions:
     ##Für time indices
@@ -132,30 +133,8 @@ for prediction in predictions:
     ##show results    
     ax = p.plot()
     bldg.plot(ax=ax, alpha=0.2)
-    
 
+  
 
 plt.show()
-#############################################################################################
 
-
-
-## PLOTTING THE RESULTS
-# df = pd.DataFrame()
-# df["test"] = MAE_TEST_MINS
-# df["train"] = MAE_TRAIN_MINS
-#
-# ax = df.plot(figsize=(16, 7))
-# ax.set_xlabel("Number of Neurons in the hidden layer")
-# ax.set_ylabel("Mean Absolute Error")
-# ax.set_title("Extreme Learning Machine error obtained for the Diabetes dataset \n when varying the number of neurons in the "
-#    "hidden layer (min. at 23 neurons)")
-# #plt.show()
-#
-# plt.figure(figsize=(16, 7))
-# D = test_maes_dictionary
-# plt.bar(range(len(D)), D.values(), align='center')
-# plt.xticks(range(len(D)), D.keys())
-# plt.ylabel("Mean Absolute Error")
-# plt.title("Error Comparison between Classic Regression Models and ELM")
-# plt.show()
